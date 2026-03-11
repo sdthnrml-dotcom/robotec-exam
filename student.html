@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Robotec Examination</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body, html { height: 100%; margin: 0; padding: 0; background-color: #2c2c2e; font-family: 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; }
+        .intro-card { width: 100%; max-width: 500px; background: white; border-radius: 16px; display: flex; flex-direction: column; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box; max-height: 95vh; overflow-y: auto; z-index: 10; }
+        .intro-header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 25px; }
+        .intro-header h2 { margin: 5px 0; color: #2196f3; font-size: 2rem; font-weight: bold; line-height: 1.2; }
+        .intro-header h1 { margin: 15px 0 0 0; color: #000; font-size: 1.6rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; font-size: 1.1rem; }
+        .form-group input[type="text"] { width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 10px; font-size: 1.1rem; outline: none; box-sizing: border-box; transition: 0.2s; }
+        
+        .consent-box { display: flex; align-items: flex-start; gap: 10px; background: #fff3cd; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-bottom: 20px; cursor: pointer; }
+        .consent-box input[type="checkbox"] { margin-top: 4px; transform: scale(1.3); cursor: pointer; }
+        .consent-box span { font-size: 0.95rem; color: #555; line-height: 1.4; }
+
+        .paper-card { width: 100%; max-width: 650px; height: 95dvh; background: white; border-radius: 16px; display: none; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10; position: relative; }
+        .content { flex-grow: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; z-index: 2; }
+        .q-text { font-size: 1.4rem; line-height: 1.5; font-weight: bold; color: #1a1a1a; margin-bottom: 25px; }
+        .opt { border: 2px solid #f0f0f0; padding: 18px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; font-size: 1.15rem; color: #333; margin-bottom: 10px; background: white; }
+        .opt.selected { background: #e3f2fd; border-color: #2196f3; }
+        
+        textarea { width: 100%; border: 2px solid #ddd; border-radius: 12px; min-height: 200px; padding: 15px; font-size: 1.2rem; outline: none; resize: none; box-sizing: border-box; }
+        pre { background: #f4f6f8; padding: 25px; border-radius: 12px; font-family: monospace; font-size: 1.1rem; overflow-x: auto; line-height: 1.8; }
+        .blank-input { border: none; border-bottom: 2px dashed #999; width: 80px; text-align: center; font-size: 1.1rem; }
+
+        .footer { background: #f8f9fa; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; z-index: 2; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; margin: 0 5px; }
+        .btn-start { background: #2196f3; color: white; font-size: 1.2rem; width: 100%; }
+        .btn-start:disabled { background: #9e9e9e; opacity: 0.8; }
+        .btn-nav { background: #e0e0e0; color: #333; }
+        .btn-next { background: #2196f3; color: white; }
+
+        #watermark-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.05; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; overflow: hidden; }
+        .wm-text { font-size: 1.8rem; font-weight: 900; transform: rotate(-30deg); padding: 50px; white-space: nowrap; }
+        #cheat-warning { color: #d32f2f; font-weight: bold; text-align: center; display: none; padding: 20px; background: #ffebee; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="intro-card" id="intro-screen">
+    <div class="intro-header">
+        <h2>Faculty Of Languages And Technology</h2>
+        <h1>Robotec</h1>
+    </div>
+    <div class="form-group">
+        <label>Student ID</label>
+        <input type="text" id="studentId" placeholder="e.g. STU-001">
+    </div>
+    <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="studentName" placeholder="Enter your full name">
+    </div>
+    <label class="consent-box">
+        <input type="checkbox" id="consentCheck" onchange="syncWithTeacher()">
+        <span>I grant permission to secure this exam session. <strong>I agree not to take screenshots.</strong> I understand my marks will be 0 if I cheat.</span>
+    </label>
+    <button class="btn btn-start" id="startBtn" onclick="startExam()" disabled>Waiting for Teacher...</button>
+</div>
+
+<div class="paper-card" id="exam-screen">
+    <div id="watermark-layer"></div>
+    <div class="content" id="display-area"></div>
+    <div class="footer">
+        <button class="btn btn-nav" onclick="nav(-1)">Prev</button>
+        <span id="progress" style="font-weight:bold">1 / 14</span>
+        <button class="btn btn-next" id="nBtn" onclick="nav(1)">Next</button>
+    </div>
+</div>
+
+<div class="intro-card" id="result-screen" style="display: none; text-align:center;">
+    <h2 style="color: #4caf50;">Exam Submitted</h2>
+    <div id="cheat-warning">🚨 SECURITY VIOLATION: Screenshot detected. Score set to 0.</div>
+    <p>Student: <b id="res-name"></b></p>
+    <p>Marks: <h1 id="res-marks" style="color: #2196f3;">0</h1></p>
+    <p>Grade: <span id="res-grade" style="background:#4caf50; color:white; padding:5px 15px; border-radius:8px; font-weight:bold;">-</span></p>
+</div>
+
+<script>
+    // --- FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0esujLjeIGinGEAnvJ7FXk6pR-fPKftU",
+        authDomain: "robotec-exam.firebaseapp.com",
+        databaseURL: "https://robotec-exam-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "robotec-exam",
+        storageBucket: "robotec-exam.firebasestorage.app",
+        messagingSenderId: "917109694961",
+        appId: "1:917109694961:web:36e9055b16af141292e450"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let studentAnswers = new Array(14).fill(null);
+    let current = 0;
+    let isExamActive = false;
+    let student = { id: "", name: "" };
+
+    const examData = [
+        { type: 'mcq', marks: 5, ans: 1, q: "1. රොබෝවක් (Robot) යනු කුමක්ද?", opts: ["A. සරල යන්ත්‍රයක්", "B. ස්වයංක්‍රීය ලෙස ක්‍රියා කරන යන්ත්‍රයක්", "C. පරිගණක කොටසක්", "D. විදුලි උපකරණයක්"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "2. රොබෝවරුන්ගේ ඉතිහාසයේ වැදගත් සන්ධිස්ථානයක් වන්නේ?", opts: ["A. Unimate සොයා ගැනීම", "B. 70 දශකය", "C. 80 දශකය", "D. 90 දශකය"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "3. රොබෝ විද්‍යාව (Robotics) යනු කුමක්ද?", opts: ["A. රොබෝවරුන්ගේ සැලසුම් අධ්‍යයනය", "B. මෘදුකාංග නිර්මාණය", "C. පරිපථ අධ්‍යයනය", "D. යන්ත්‍ර අලුත්වැඩියාව"] },
+        { type: 'mcq', marks: 5, ans: 3, q: "4. රොබෝ තාක්ෂණය භාවිතා වන ක්ෂේත්‍රය?", opts: ["A. නිෂ්පාදනය", "B. සෞඛ්‍ය", "C. පර්යේෂණ", "D. සියල්ල"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "5. කාර්මික රොබෝවරු භාවිතා කරන්නේ?", opts: ["A. එකලස් කිරීම හා ඇසුරුම් කිරීම", "B. සංගීතයට", "C. වැඩසටහන් ලිවීමට", "D. අන්තර්ජාලයට"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "6. හියුමනොයිඩ් රොබෝ යනු?", opts: ["A. මිනිස් ශරීරයට සමාන රොබෝවක්", "B. රෝද මත යන රොබෝවක්", "C. කර්මාන්ත රොබෝවක්", "D. වැඩසටහනක්"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "7. කොබොට් (Cobots) යනු?", opts: ["A. මිනිසුන් සමඟ වැඩ කිරීමට නිර්මාණය කළ රොබෝවරු", "B. යුධ රොබෝවරු", "C. විනෝද රොබෝවරු", "D. ජංගම රොබෝවරු"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "8. Arduino යනු කුමක්ද?", opts: ["A. Hardware/Software platform එකක්", "B. OS එකක්", "C. පාලන පද්ධතියක්", "D. App එකක්"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "9. Sensor එකක් භාවිතා කරන්නේ?", opts: ["A. දත්ත හඳුනා ගැනීමට", "B. බලය ලබා දීමට", "C. Compile කිරීමට", "D. USB සම්බන්ධතාවට"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "10. Arduino program ලිවීමට භාවිතා කරන්නේ?", opts: ["A. Arduino IDE", "B. Builder", "C. Simulator", "D. Editor"] },
+        { type: 'essay', marks: 10, q: "11. රොබෝවරු වර්ග මොනවාද?" },
+        { type: 'essay', marks: 10, q: "12. ආඩුයිනෝ පුවරුවේ කොටස් 5 ක් නම් කරන්න." },
+        { type: 'fill-blank', marks: 15, q: "13. පහත දැක්වෙන Arduino කේතයේ හිස්තැන් පුරවන්න." },
+        { type: 'essay', marks: 10, q: "14. කේතයක් උඩුගත කිරීමේ මූලික පියවර ලියන්න." }
+    ];
+
+    function syncWithTeacher() {
+        db.ref('status').on('value', (snap) => {
+            const status = snap.val();
+            const btn = document.getElementById('startBtn');
+            const consented = document.getElementById('consentCheck').checked;
+            if(status === 'running') {
+                btn.disabled = !consented;
+                btn.innerText = consented ? "Start Exam" : "Check Consent to Start";
+            } else {
+                btn.disabled = true;
+                btn.innerText = "Waiting for Teacher...";
+            }
+        });
+    }
+    syncWithTeacher();
+
+    function startExam() {
+        student.id = document.getElementById('studentId').value.trim();
+        student.name = document.getElementById('studentName').value.trim();
+        if(!student.id || !student.name) return alert("Fill Name and ID");
+
+        document.getElementById('intro-screen').style.display = 'none';
+        document.getElementById('exam-screen').style.display = 'flex';
+        isExamActive = true;
+
+        const wm = document.getElementById('watermark-layer');
+        for(let i=0; i<20; i++) wm.innerHTML += `<div class="wm-text">${student.id} • ${student.name}</div>`;
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const area = document.getElementById('display-area');
+        const q = examData[current];
+        let html = `<div class="q-text">${q.q}</div>`;
+
+        if(q.type === 'mcq') {
+            q.opts.forEach((opt, i) => {
+                let sel = studentAnswers[current] === i ? 'selected' : '';
+                html += `<div class="opt ${sel}" onclick="setAns(${i})">${opt}</div>`;
+            });
+        } else if(q.type === 'fill-blank') {
+            html += `<pre>void setup() {\n  pinMode(2, <input type="text" class="blank-input" id="b1">);\n}\nvoid loop() {\n  digitalWrite(2, HIGH);\n}</pre>`;
+        } else {
+            html += `<textarea id="essay" placeholder="Write here...">${studentAnswers[current] || ''}</textarea>`;
+        }
+
+        area.innerHTML = html;
+        document.getElementById('progress').innerText = `${current+1} / 14`;
+        document.getElementById('nBtn').innerText = current === 13 ? "Submit" : "Next";
+    }
+
+    window.setAns = (i) => { studentAnswers[current] = i; renderQuestion(); };
+
+    function nav(d) {
+        if(examData[current].type === 'essay') studentAnswers[current] = document.getElementById('essay').value;
+        if(current + d >= 14) { submit(false); return; }
+        if(current + d < 0) return;
+        current += d; renderQuestion();
+    }
+
+    function submit(cheated) {
+        if(!isExamActive) return;
+        isExamActive = false;
+        let score = 0;
+        if(!cheated) {
+            studentAnswers.forEach((a, i) => {
+                if(examData[i].type === 'mcq' && a === examData[i].ans) score += 5;
+                if(examData[i].type === 'essay' && a && a.length > 5) score += 7;
+            });
+        }
+        score = Math.min(score, 100);
+        let grade = score >= 75 ? "A" : score >= 45 ? "C" : "W";
+        if(cheated) grade = "VOID";
+
+        db.ref('results/' + student.id).set({
+            id: student.id, name: student.name, marks: cheated ? 0 : score, grade: grade, cheated: cheated
+        });
+
+        document.getElementById('exam-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('res-name').innerText = student.name;
+        document.getElementById('res-marks').innerText = cheated ? 0 : score;
+        document.getElementById('res-grade').innerText = grade;
+        if(cheated) document.getElementById('cheat-warning').style.display = 'block';
+    }
+
+    window.addEventListener('blur', () => { if(isExamActive) submit(true); });
+    document.addEventListener("visibilitychange", () => { if(document.hidden && isExamActive) submit(true); });
+</script>
+</body>
+</html>
