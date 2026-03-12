@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Robotec Examination</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #2c2c2e;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        body.exam-active,
+        body.exam-active * {
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body.exam-active img,
+        body.exam-active a {
+            -webkit-user-drag: none;
+            user-drag: none;
+        }
+
+        .intro-card {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            max-height: 95vh;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .intro-header {
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+
+        .intro-header h2 {
+            margin: 5px 0;
+            color: #2196f3;
+            font-size: 2rem;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .intro-header h1 {
+            margin: 15px 0 0 0;
+            color: #000;
+            font-size: 1.6rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            outline: none;
+            box-sizing: border-box;
+            transition: 0.2s;
+        }
+
+        .form-group input[type="text"]:focus {
+            border-color: #2196f3;
+        }
+
+        .consent-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffe082;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .consent-box input[type="checkbox"] {
+            margin-top: 4px;
+            transform: scale(1.3);
+            cursor: pointer;
+        }
+
+        .consent-box span {
+            font-size: 0.95rem;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        .consent-box strong {
+            color: #d32f2f;
+        }
+
+        .paper-card {
+            width: 100%;
+            max-width: 650px;
+            height: 95dvh;
+            background: white;
+            border-radius: 16px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 10;
+            position: relative;
+        }
+
+        .paper-card.secure-mode {
+            touch-action: manipulation;
+        }
+
+        .content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            z-index: 2;
+        }
+
+        @keyframes gentleFade {
+            0% { opacity: 0; transform: translateY(15px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .question-wrapper {
+            margin: auto 0;
+            width: 100%;
+            animation: gentleFade 0.4s ease-out;
+        }
+
+        .marks-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+
+        .marks-badge {
+            font-weight: bold;
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 1rem;
+        }
+
+        .q-text {
+            font-size: 1.4rem;
+            line-height: 1.5;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 25px;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .opt {
+            border: 2px solid #f0f0f0;
+            padding: 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 1.15rem;
+            color: #333;
+            transition: 0.2s;
+            background: white;
+        }
+
+        .opt:active, .opt.selected {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .opt input {
+            margin-right: 15px;
+            transform: scale(1.4);
+        }
+
+        textarea {
+            width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            min-height: 200px;
+            padding: 15px;
+            font-size: 1.2rem;
+            outline: none;
+            resize: none;
+            font-family: inherit;
+            box-sizing: border-box;
+            line-height: 1.6;
+            background: transparent;
+            position: relative;
+            z-index: 5;
+        }
+
+        pre {
+            background: #f4f6f8;
+            padding: 25px;
+            border: 1px solid #e1e4e8;
+            border-radius: 12px;
+            font-family: 'Consolas', monospace;
+            font-size: 1.25rem;
+            overflow-x: auto;
+            color: #24292e;
+            line-height: 2;
+            position: relative;
+            z-index: 5;
+        }
+
+        .blank-input {
+            border: none;
+            border-bottom: 2px dashed #999;
+            background: #fff;
+            color: #005cc5;
+            font-family: 'Consolas', monospace;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 4px 5px;
+            margin: 0 5px;
+            border-radius: 4px;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            transition: 0.2s;
+        }
+
+        .blank-input:focus {
+            border-bottom: 2px solid #2196f3;
+            background: #e3f2fd;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+            gap: 10px;
+            z-index: 2;
+            position: relative;
+        }
+
+        .btn {
+            padding: 12px 10px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.2s;
+            flex: 1;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.2;
+        }
+
+        .btn-start {
+            width: 100%;
+            background: #2196f3;
+            color: white;
+            font-size: 1.2rem;
+            padding: 15px;
+        }
+
+        .btn-start:disabled {
+            background: #9e9e9e;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .btn-nav {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-next {
+            background: #2196f3;
+            color: white;
+        }
+
+        #progress {
+            font-weight: 800;
+            color: #111;
+            font-size: 1.2rem;
+            text-align: center;
+            min-width: 60px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 1.1rem;
+        }
+
+        .result-row strong {
+            color: #333;
+        }
+
+        .grade-badge {
+            background: #4caf50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.4rem;
+            text-transform: uppercase;
+        }
+
+        .breakdown-box {
+            margin-top: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+        }
+
+        #cheat-warning {
+            color: #d32f2f;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        #watermark-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            align-items: center;
+            opacity: 0.09;
+        }
+
+        .wm-text {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #000;
+            transform: rotate(-30deg);
+            white-space: nowrap;
+            padding: 40px;
+            user-select: none;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .modal-box {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            text-align: center;
+            animation: gentleDrop 0.3s ease-out;
+            color: #eee;
+        }
+
+        @keyframes gentleDrop {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-box h3 {
+            margin: 0 0 15px 0;
+            color: #2196f3;
+            font-size: 1.5rem;
+        }
+
+        .modal-box p {
+            color: #ccc;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #444;
+            color: #eee;
+        }
+
+        .btn-cancel:hover {
+            background: #555;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 13px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #2c2c2e;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 14px;
+        }
+
+        .modal-input:focus {
+            border-color: #2196f3;
+        }
+    </style>
+</head>
+<body>
+
+<div id="customModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 id="modalTitle">Notice</h3>
+        <p id="modalMessage">Message goes here</p>
+        <input type="password" id="modalInput" class="modal-input" style="display:none;" placeholder="Enter Password">
+        <div class="modal-actions">
+            <button id="btnCancel" class="btn btn-cancel">Cancel</button>
+            <button id="btnConfirm" class="btn" style="background:#2196f3; color:white;">OK</button>
+        </div>
+    </div>
+</div>
+
+<div class="intro-card" id="intro-screen">
+    <div class="intro-header">
+        <h2>Faculty Of Languages And Technology</h2>
+        <h1>Robotec</h1>
+    </div>
+
+    <div class="form-group">
+        <label>Student ID</label>
+        <input type="text" id="studentId" placeholder="e.g. STU-001">
+    </div>
+
+    <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="studentName" placeholder="Enter your full name">
+    </div>
+
+    <label class="consent-box">
+        <input type="checkbox" id="consentCheck" onchange="checkTeacherStatus()">
+        <span>I grant permission to secure this exam session. <strong>I agree not to take screenshots.</strong> I understand my ID will be tracked.</span>
+    </label>
+
+    <button class="btn btn-start" id="startBtn" onclick="startExam()" disabled>Check Consent to Continue</button>
+</div>
+
+<div class="paper-card" id="exam-screen">
+    <div id="watermark-layer"></div>
+    <div class="content" id="display-area"></div>
+    <div class="footer">
+        <button class="btn btn-nav" id="pBtn" onclick="nav(-1)">පෙර (Prev)</button>
+        <span id="progress">1 / 14</span>
+        <button class="btn btn-next" id="nBtn" onclick="nav(1)">මීළඟ (Next)</button>
+    </div>
+</div>
+
+<div class="intro-card" id="result-screen" style="display: none;">
+    <div class="intro-header" style="margin-bottom: 10px; padding-bottom: 10px;">
+        <h2 style="color: #4caf50;" id="finish-title">Exam Completed</h2>
+        <h1>Robotec Final Results</h1>
+    </div>
+    <div id="cheat-warning">⚠️ Exam auto-submitted due to a security violation.</div>
+    <div class="result-row"><span>Student Name:</span> <strong id="res-name"></strong></div>
+    <div class="result-row"><span>Student ID:</span> <strong id="res-id"></strong></div>
+    <div class="result-row"><span>Answered:</span> <strong><span id="res-answered"></span> / 14</strong></div>
+    <div class="breakdown-box" id="res-breakdown"></div>
+    <div class="result-row" style="margin-top: 15px; font-size: 1.3rem;">
+        <span>Total Marks:</span> <strong id="res-marks" style="color: #2196f3;"></strong>
+    </div>
+    <div class="result-row" style="border:none; align-items: center; margin-top: 5px;">
+        <span>Final Grade:</span> <span class="grade-badge" id="res-grade"></span>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0esujLjeIGinGEAnvJ7FXk6pR-fPKftU",
+        authDomain: "robotec-exam.firebaseapp.com",
+        databaseURL: "https://robotec-exam-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "robotec-exam",
+        storageBucket: "robotec-exam.firebasestorage.app",
+        messagingSenderId: "917109694961",
+        appId: "1:917109694961:web:36e9055b16af141292e450"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentStudent = { id: "", name: "" };
+    let studentAnswers = new Array(14).fill(null);
+    let current = 0;
+    let isExamActive = false;
+    let globalStatus = 'stopped';
+    let isSubmitting = false;
+    let currentSessionKey = null;
+    let fullscreenWarningShown = false;
+
+    const DEVICE_LOCK_KEY = "robotec_exam_device_lock";
+    const RELOGIN_PASSWORD = "159875";
+
+    function customBox(message, type = 'alert') {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('customModal');
+            const title = document.getElementById('modalTitle');
+            const msg = document.getElementById('modalMessage');
+            const input = document.getElementById('modalInput');
+            const btnCancel = document.getElementById('btnCancel');
+            const btnConfirm = document.getElementById('btnConfirm');
+
+            msg.innerText = message;
+            input.value = '';
+            modal.style.display = 'flex';
+
+            if (type === 'alert') {
+                title.innerText = "Notice";
+                title.style.color = "#2196f3";
+                input.style.display = 'none';
+                btnCancel.style.display = 'none';
+                btnConfirm.innerText = "OK";
+                btnConfirm.style.background = "#2196f3";
+                btnConfirm.onclick = () => { modal.style.display = 'none'; resolve(true); };
+            }
+            else if (type === 'confirm') {
+                title.innerText = "Are you sure?";
+                title.style.color = "#f44336";
+                input.style.display = 'none';
+                btnCancel.style.display = 'block';
+                btnConfirm.innerText = "Yes, Submit";
+                btnConfirm.style.background = "#2196f3";
+                btnCancel.onclick = () => { modal.style.display = 'none'; resolve(false); };
+                btnConfirm.onclick = () => { modal.style.display = 'none'; resolve(true); };
+            }
+            else if (type === 'violation') {
+                title.innerText = "Security Violation";
+                title.style.color = "#f44336";
+                input.style.display = 'none';
+                btnCancel.style.display = 'none';
+                btnConfirm.innerText = "I Understand";
+                btnConfirm.style.background = "#f44336";
+                btnConfirm.onclick = () => { modal.style.display = 'none'; resolve(true); };
+            }
+            else if (type === 'password') {
+                title.innerText = "Password Required";
+                title.style.color = "#ff9800";
+                input.style.display = 'block';
+                btnCancel.style.display = 'block';
+                btnConfirm.innerText = "Submit";
+                btnConfirm.style.background = "#2196f3";
+                setTimeout(() => input.focus(), 50);
+                btnCancel.onclick = () => { modal.style.display = 'none'; resolve(null); };
+                btnConfirm.onclick = () => { modal.style.display = 'none'; resolve(input.value); };
+            }
+        });
+    }
+
+    function getDeviceLock() {
+        try {
+            return JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)) || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function setDeviceLock(studentId, studentName) {
+        if (!currentSessionKey) return;
+        const lockData = {
+            sessionKey: currentSessionKey,
+            studentId: studentId,
+            studentName: studentName,
+            lockedAt: Date.now()
+        };
+        localStorage.setItem(DEVICE_LOCK_KEY, JSON.stringify(lockData));
+    }
+
+    function clearDeviceLock() {
+        localStorage.removeItem(DEVICE_LOCK_KEY);
+    }
+
+    async function enterFullscreen() {
+        const el = document.documentElement;
+        try {
+            if (el.requestFullscreen) await el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+            else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+        } catch (e) {}
+    }
+
+    function isFullscreenActive() {
+        return !!(
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.msFullscreenElement
+        );
+    }
+
+    async function prepareSecureMode() {
+        document.body.classList.add('exam-active');
+        document.getElementById('exam-screen').classList.add('secure-mode');
+        await enterFullscreen();
+    }
+
+    function clearSecureMode() {
+        document.body.classList.remove('exam-active');
+        document.getElementById('exam-screen').classList.remove('secure-mode');
+    }
+
+    db.ref('status').on('value', snap => {
+        globalStatus = snap.val() || 'stopped';
+    });
+
+    db.ref('settings').on('value', snap => {
+        const settings = snap.val() || {};
+        currentSessionKey = settings.startTime || null;
+        checkTeacherStatus();
+    });
+
+    function checkTeacherStatus() {
+        const status = globalStatus;
+        const startBtn = document.getElementById('startBtn');
+        const introScreen = document.getElementById('intro-screen');
+        const hasConsented = document.getElementById('consentCheck').checked;
+
+        if (status === 'stopped') {
+            clearDeviceLock();
+        }
+
+        if (!isExamActive && introScreen.style.display !== 'none') {
+            if (status === 'running') {
+                startBtn.disabled = !hasConsented;
+                startBtn.innerText = hasConsented ? "Start Exam" : "Check Consent to Continue";
+            } else {
+                startBtn.disabled = true;
+                startBtn.innerText = "Wait For Teacher to Start";
+            }
+        }
+
+        if (isExamActive && status === 'stopped') {
+            isExamActive = false;
+            calculateResults("none");
+            customBox("The teacher has ended the exam. Time is up!", "alert").then(() => {
+                let warningBox = document.getElementById('cheat-warning');
+                warningBox.innerText = "⏰ Time is up! The teacher stopped the exam.";
+                warningBox.style.background = "#fff3cd";
+                warningBox.style.color = "#ff9800";
+                warningBox.style.display = 'block';
+            });
+        }
+    }
+
+    setInterval(checkTeacherStatus, 500);
+
+    function generateWatermark() {
+        const wmLayer = document.getElementById('watermark-layer');
+        const wmString = `${currentStudent.id} • ${currentStudent.name} • `;
+        let html = '';
+        for (let i = 0; i < 36; i++) html += `<div class="wm-text">${wmString}</div>`;
+        wmLayer.innerHTML = html;
+    }
+
+    async function startExam() {
+        if (globalStatus !== 'running') {
+            await customBox("The exam is closed. Please wait.", "alert");
+            return;
+        }
+
+        if (!currentSessionKey) {
+            await customBox("Exam session is not ready yet. Please try again.", "alert");
+            return;
+        }
+
+        const idInput = document.getElementById('studentId').value.trim();
+        const nameInput = document.getElementById('studentName').value.trim();
+
+        if (idInput === "" || nameInput === "") {
+            await customBox("Please enter ID and Name.", "alert");
+            return;
+        }
+
+        const existingLock = getDeviceLock();
+
+        if (existingLock && existingLock.sessionKey === currentSessionKey) {
+            const existingResultSnap = await db.ref('results/' + idInput).once('value');
+
+            if (existingResultSnap.exists()) {
+                await customBox(
+                    `This device has already been used for this exam session by ID: ${existingLock.studentId}. You cannot log in again until the teacher ends and restarts the exam.`,
+                    "alert"
+                );
+                return;
+            }
+
+            const pass = await customBox(
+                "This device has already been used in this exam session. Enter the re-login password to continue.",
+                "password"
+            );
+
+            if (pass !== RELOGIN_PASSWORD) {
+                if (pass !== null) {
+                    await customBox("Incorrect password. Login blocked.", "alert");
+                }
+                return;
+            }
+        }
+
+        const studentResultSnap = await db.ref('results/' + idInput).once('value');
+
+        if (studentResultSnap.exists()) {
+            await customBox("Error: A student with this ID has already completed the exam.", "alert");
+            return;
+        }
+
+        currentStudent.id = idInput;
+        currentStudent.name = nameInput;
+
+        setDeviceLock(idInput, nameInput);
+
+        const activeRef = db.ref('active_students/' + idInput);
+        activeRef.set(true);
+        activeRef.onDisconnect().remove();
+
+        document.getElementById('intro-screen').style.display = 'none';
+        document.getElementById('exam-screen').style.display = 'flex';
+        isExamActive = true;
+        isSubmitting = false;
+        fullscreenWarningShown = false;
+        studentAnswers = new Array(14).fill(null);
+        current = 0;
+
+        generateWatermark();
+        renderQuestion();
+        await prepareSecureMode();
+    }
+
+    const examData = [
+        { type: 'mcq', marks: 5, ans: 1, q: "1. රොබෝවක් (Robot) යනු කුමක්ද? (What is a Robot?)", opts: ["A. මිනිසුන්ගේ නියෝග අනුව පමණක් ක්‍රියා කරන සරල යන්ත්‍රයක්", "B. කාර්යයන් ඉටු කිරීමට නිර්මාණය කළ සහ සමහර ක්‍රියාවලීන් ස්වයංක්‍රීය ලෙස කරන යන්ත්‍රයක්", "C. පරිගණකයකට සම්බන්ධ කර භාවිතා කරන ඕනෑම යන්ත්‍රයක්", "D. විදුලි බලයෙන් ක්‍රියා කරන ඕනෑම උපකරණයක්"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "2. රොබෝවරුන්ගේ ඉතිහාසයේ වැදගත් සන්ධිස්ථානයක් ලෙස සැලකෙන්නේ කුමක්ද?", opts: ["A. 1950 දශකයේ “Unimate” රොබෝව සොයා ගැනීම", "B. 1970 දශකයේ පරිගණක වැඩි වශයෙන් භාවිතා වීම", "C. 1980 දශකයේ පුද්ගලික පරිගණක නිෂ්පාදනය වීම", "D. 1990 දශකයේ අන්තර්ජාලය ව්‍යාප්ත වීම"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "3. රොබෝ විද්‍යාව (Robotics) යනු කුමක්ද?", opts: ["A. රොබෝවරුන්ගේ සැලසුම්, නිර්මාණය සහ භාවිතය පිළිබඳ අධ්‍යයනය", "B. පරිගණක මෘදුකාංග නිර්මාණය පිළිබඳ අධ්‍යයනය", "C. විදුලි පරිපථ පමණක් අධ්‍යයනය", "D. යන්ත්‍ර අලුත්වැඩියා කිරීම පිළිබඳ අධ්‍යයනය"] },
+        { type: 'mcq', marks: 5, ans: 3, q: "4. රොබෝ තාක්ෂණය භාවිතා වන ක්ෂේත්‍රයක් ලෙස නිවැරදි උදාහරණය කුමක්ද?", opts: ["A. නිෂ්පාදන කර්මාන්තය (Manufacturing)", "B. සෞඛ්‍ය සේවා (Healthcare)", "C. පර්යේෂණ (Research)", "D. ඉහත සියල්ලම"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "5. කාර්මික රොබෝවරු බොහෝවිට භාවිතා කරන්නේ කුමන කාර්යයන් සඳහාද?", opts: ["A. එකලස් කිරීම, ද්‍රව්‍ය හැසිරවීම සහ ඇසුරුම් කිරීම", "B. සංගීතය වාදනය කිරීම", "C. පරිගණක වැඩසටහන් ලිවීම", "D. අන්තර්ජාලය භාවිතා කිරීම"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "6. හියුමනොයිඩ් රොබෝ (Humanoid Robot) යන්නෙන් අදහස් කරන්නේ කුමක්ද?", opts: ["A. මිනිස් ශරීර ව්‍යුහයට සමාන ලෙස නිර්මාණය කළ රොබෝවක්", "B. රෝද මත පමණක් චලනය වන රොබෝවක්", "C. කර්මාන්තශාලාවල භාවිතා කරන රොබෝවක්", "D. පරිගණක වැඩසටහනක්"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "7. කොබොට් (Cobots / Collaborative Robots) යනු කුමන රොබෝ වර්ගයද?", opts: ["A. මිනිසුන් සමඟ එකම වැඩබිමක වැඩ කිරීමට නිර්මාණය කළ රොබෝවරු", "B. යුධ කටයුතු සඳහා භාවිතා කරන රොබෝවරු", "C. විනෝදාත්මක රොබෝවරු", "D. ජංගම දුරකථන සඳහා භාවිතා කරන රොබෝවරු"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "8. Arduino යනු කුමක්ද?", opts: ["A. hardware සහ software platform එකක්", "B. පරිගණක මෙහෙයුම් පද්ධතියක්", "C. කාර්මික රොබෝ පාලන පද්ධතියක්", "D. ජංගම දුරකථන යෙදුමක්"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "9. Arduino project එකක Sensor භාවිතා කරන්නේ කුමක් සඳහාද?", opts: ["A. පරිසරයෙන් දත්ත හඳුනාගෙන board එකට ලබා දීමට", "B. board එකට විදුලි බලය ලබා දීමට", "C. program එක compile කිරීමට", "D. USB සම්බන්ධතාවය ලබා දීමට"] },
+        { type: 'mcq', marks: 5, ans: 0, q: "10. Arduino program ලිවීමට භාවිතා කරන software එක කුමක්ද?", opts: ["A. Arduino IDE", "B. Builder", "C. Simulator", "D. Editor"] },
+        { type: 'essay', marks: 10, q: "11. රොබෝවරු වර්ග මොනවාද?", prefill: "1. \n2. \n3. " },
+        { type: 'essay', marks: 10, q: "12. ආඩුයිනෝ පුවරුවේ කොටස් 5 ක් නම් කරන්න.", prefill: "1. \n2. \n3. \n4. \n5. " },
+        { type: 'fill-blank', marks: 15, q: "13. පහත දැක්වෙන Arduino කේතයේ හිස්තැන් පුරවන්න." },
+        { type: 'essay', marks: 10, q: "14. කේතයක් උඩුගත කිරීමේ මූලික පියවර ලියන්න.", prefill: "1. \n2. \n3. \n4. \n5. " }
+    ];
+
+    function saveCurrentAnswer() {
+        const item = examData[current];
+        if (item.type === 'mcq') {
+            const selected = document.querySelector(`input[name="q${current}"]:checked`);
+            studentAnswers[current] = selected ? parseInt(selected.value) : null;
+        } else if (item.type === 'fill-blank') {
+            const inputs = document.querySelectorAll('.blank-input');
+            studentAnswers[current] = Array.from(inputs).map(inp => inp.value);
+        } else {
+            const essayBox = document.getElementById('essay-box');
+            if (essayBox) studentAnswers[current] = essayBox.value;
+        }
+    }
+
+    function renderQuestion() {
+        const display = document.getElementById('display-area');
+        const item = examData[current];
+        const savedAnswer = studentAnswers[current];
+
+        let html = `<div class="question-wrapper"><div class="marks-row"><div class="marks-badge">${item.marks} Marks</div></div><div class="q-text">${item.q}</div>`;
+
+        if (item.type === 'mcq') {
+            html += `<div class="options-list">`;
+            item.opts.forEach((opt, index) => {
+                let isChecked = (savedAnswer === index) ? "checked" : "";
+                html += `<label class="opt"><input type="radio" name="q${current}" value="${index}" ${isChecked}> ${opt}</label>`;
+            });
+            html += `</div>`;
+        } else if (item.type === 'fill-blank') {
+            let vals = savedAnswer || [];
+            html += `<pre>void setup () {\n  pinMode (2, <input type="text" class="blank-input" style="width: 100px;" value="${vals[0] || ''}">); \n}\nvoid loop () {\n  digitalWrite (<input type="text" class="blank-input" style="width: 50px;" value="${vals[1] || ''}">, <input type="text" class="blank-input" style="width: 80px;" value="${vals[2] || ''}">);\n  delay ( 100 );\n  <input type="text" class="blank-input" style="width: 150px;" value="${vals[3] || ''}">(<input type="text" class="blank-input" style="width: 50px;" value="${vals[4] || ''}">, <input type="text" class="blank-input" style="width: 80px;" value="${vals[5] || ''}">);\n  <input type="text" class="blank-input" style="width: 100px;" value="${vals[6] || ''}">( <input type="text" class="blank-input" style="width: 80px;" value="${vals[7] || ''}"> );\n}</pre>`;
+        } else {
+            let textValue = (savedAnswer !== null && savedAnswer !== undefined) ? savedAnswer : (item.prefill || "");
+            html += `<textarea id="essay-box" placeholder="පිළිතුර මෙහි ඇතුළත් කරන්න...">${textValue}</textarea>`;
+        }
+
+        html += `</div>`;
+        display.innerHTML = html;
+        document.getElementById('pBtn').disabled = (current === 0);
+        document.getElementById('nBtn').innerText = (current === examData.length - 1) ? "Submit (ඉදිරිපත් කරන්න)" : "මීළඟ (Next)";
+        document.getElementById('progress').innerText = `${current + 1} / ${examData.length}`;
+        display.scrollTop = 0;
+    }
+
+    async function nav(dir) {
+        saveCurrentAnswer();
+        if (current + dir >= examData.length) {
+            const isSure = await customBox("ඔබගේ පිළිතුරු ඉදිරිපත් කිරීමට අවශ්‍යද? (Are you sure you want to submit?)", "confirm");
+            if (isSure) calculateResults("none");
+            return;
+        }
+        current += dir;
+        renderQuestion();
+    }
+
+    async function triggerSecurityViolation(reason) {
+        if (!isExamActive || isSubmitting) return;
+
+        let warningBox = document.getElementById('cheat-warning');
+
+        if (reason === "screenshot") {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText('');
+                }
+            } catch (e) {}
+
+            calculateResults("screenshot");
+            warningBox.innerText = "🚨 SECURITY VIOLATION: Screenshot detected! All marks voided.";
+            warningBox.style.background = "#ffebee";
+            warningBox.style.color = "#d32f2f";
+            warningBox.style.display = 'block';
+            await customBox("SECURITY VIOLATION: You attempted to take a screenshot. Your exam has been terminated and your score is 0.", "violation");
+        } else if (reason === "focus") {
+            calculateResults("focus");
+            warningBox.innerText = "⚠️ Auto-Submitted: You switched apps, left the exam window, or exited fullscreen.";
+            warningBox.style.background = "#fff3cd";
+            warningBox.style.color = "#ff9800";
+            warningBox.style.display = 'block';
+            await customBox("Notice: You left the exam screen or fullscreen mode. Your paper has been automatically submitted.", "alert");
+        }
+    }
+
+    function calculateResults(violationType = "none") {
+        if (!isExamActive || isSubmitting) return;
+        isSubmitting = true;
+        isExamActive = false;
+        clearSecureMode();
+
+        saveCurrentAnswer();
+
+        let totalMarks = 0;
+        let answeredCount = 0;
+        let breakdownHTML = `<h3 style="margin-top:0; margin-bottom:10px; font-size:1.1rem; color:#444;">Marks per Answered Question</h3>`;
+
+        for (let i = 0; i < examData.length; i++) {
+            let ans = studentAnswers[i];
+            let item = examData[i];
+            let qMarks = 0;
+            let isAnswered = false;
+
+            if (item.type === 'mcq') {
+                if (ans !== null && ans !== undefined && ans !== "") {
+                    isAnswered = true;
+                    if (ans === item.ans) qMarks = 5;
+                }
+            } else if (item.type === 'essay') {
+                let text = String(ans || "").toLowerCase().trim();
+                let defaultTxt = String(item.prefill || "").toLowerCase().trim();
+                if (text !== "" && text !== defaultTxt) {
+                    isAnswered = true;
+                    if (i === 10) {
+                        let found = 0;
+                        if (text.includes("industrial") || text.includes("කාර්මික")) { qMarks += 3; found++; }
+                        if (text.includes("humanoid") || text.includes("මානවරූපී") || text.includes("හියුමනොයිඩ්")) { qMarks += 3; found++; }
+                        if (text.includes("cobot") || text.includes("සහයෝගීතා")) { qMarks += 3; found++; }
+                        if (found === 3) qMarks += 1;
+                    } else if (i === 11) {
+                        if (text.includes("usb")) qMarks += 2;
+                        if (text.includes("power") || text.includes("බල")) qMarks += 2;
+                        if (text.includes("digital")) qMarks += 2;
+                        if (text.includes("analog")) qMarks += 2;
+                        if (text.includes("reset") || text.includes("රිසෙට්")) qMarks += 2;
+                        if (text.includes("micro") || text.includes("atmega") || text.includes("මයික්‍රො")) qMarks += 2;
+                        qMarks = Math.min(qMarks, 10);
+                    } else if (i === 13) {
+                        if (text.includes("write") || text.includes("sketch") || text.includes("කේතය")) qMarks += 2;
+                        if (text.includes("verify") || text.includes("පරික්ෂා") || text.includes("compile")) qMarks += 2;
+                        if (text.includes("board") || text.includes("පුවරුව") || text.includes("තෝරන්න")) qMarks += 2;
+                        if (text.includes("port") || text.includes("තොට") || text.includes("com")) qMarks += 2;
+                        if (text.includes("upload") || text.includes("උඩුගත")) qMarks += 2;
+                        qMarks = Math.min(qMarks, 10);
+                    }
+                }
+            } else if (item.type === 'fill-blank') {
+                let safeAns = Array.isArray(ans) ? ans : [];
+                let hasAnswer = false;
+                for (let j = 0; j < safeAns.length; j++) {
+                    if (safeAns[j] && String(safeAns[j]).trim() !== "") hasAnswer = true;
+                }
+                if (hasAnswer) {
+                    isAnswered = true;
+                    let v0 = String(safeAns[0] || "").toUpperCase();
+                    let v1 = String(safeAns[1] || "").toUpperCase();
+                    let v2 = String(safeAns[2] || "").toUpperCase();
+                    let v3 = String(safeAns[3] || "").toUpperCase();
+                    let v4 = String(safeAns[4] || "").toUpperCase();
+                    let v5 = String(safeAns[5] || "").toUpperCase();
+                    let v6 = String(safeAns[6] || "").toUpperCase();
+                    let v7 = String(safeAns[7] || "").toUpperCase();
+
+                    if (v0.includes("OUTPUT")) qMarks += 4;
+                    if (v1.includes("2") && (v2.includes("HIGH") || v2.includes("LOW"))) qMarks += 4;
+                    if (v3.includes("DIGITALWRITE") && v4.includes("2") && (v5.includes("LOW") || v5.includes("HIGH"))) qMarks += 4;
+                    if (v6.includes("DELAY") && v7.includes("100")) qMarks += 3;
+                }
+            }
+
+            if (isAnswered) {
+                answeredCount++;
+                totalMarks += qMarks;
+                breakdownHTML += `<div style="display:flex; justify-content:space-between; padding: 6px 0; border-bottom: 1px dashed #ddd; font-size: 1.1rem;"><span>Question ${i + 1}</span><strong style="color: #2196f3;">${qMarks} Marks</strong></div>`;
+            }
+        }
+
+        if (violationType === "screenshot") {
+            totalMarks = 0;
+            breakdownHTML = `<div style="text-align:center; padding: 20px; color: #d32f2f; font-weight: bold; font-size: 1.2rem; background: #ffebee; border-radius: 8px;">❌ SCORE VOIDED<br>Security violation detected. All marks have been cancelled.</div>`;
+            document.getElementById('finish-title').innerText = "Exam Terminated";
+            document.getElementById('finish-title').style.color = "#d32f2f";
+        } else if (answeredCount === 0) {
+            breakdownHTML += `<div style="text-align:center; padding: 10px; color: #f44336; font-weight: bold;">No questions were answered.</div>`;
+        }
+
+        let grade = "F";
+        let gradeColor = "#f44336";
+
+        if (violationType !== "screenshot") {
+            if (totalMarks >= 90) { grade = "A+"; gradeColor = "#4caf50"; }
+            else if (totalMarks >= 75) { grade = "A"; gradeColor = "#4caf50"; }
+            else if (totalMarks >= 65) { grade = "B"; gradeColor = "#8bc34a"; }
+            else if (totalMarks >= 55) { grade = "C"; gradeColor = "#ff9800"; }
+            else if (totalMarks >= 35) { grade = "S"; gradeColor = "#ffeb3b"; }
+        } else {
+            grade = "VOID";
+            gradeColor = "#d32f2f";
+        }
+
+        if (currentStudent.id) {
+            db.ref('active_students/' + currentStudent.id).remove();
+        }
+
+        document.getElementById('exam-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'flex';
+        document.getElementById('res-name').innerText = currentStudent.name || "Unknown";
+        document.getElementById('res-id').innerText = currentStudent.id || "N/A";
+        document.getElementById('res-answered').innerText = answeredCount;
+        document.getElementById('res-marks').innerText = Math.round(totalMarks) + " / 100";
+        document.getElementById('res-breakdown').innerHTML = breakdownHTML;
+
+        let badge = document.getElementById('res-grade');
+        badge.innerText = grade;
+        badge.style.backgroundColor = gradeColor;
+        badge.style.color = (grade === "S" || grade === "C") ? "#333" : "white";
+
+        const finalResultData = {
+            id: currentStudent.id || "N/A",
+            name: currentStudent.name || "Unknown",
+            answered: answeredCount,
+            marks: Math.round(totalMarks),
+            grade: grade,
+            violation: violationType
+        };
+
+        db.ref('results/' + currentStudent.id).set(finalResultData);
+    }
+
+    document.addEventListener("contextmenu", function(e) {
+        if (isExamActive) e.preventDefault();
+    });
+
+    document.addEventListener("copy", function(e) {
+        if (isExamActive) e.preventDefault();
+    });
+
+    document.addEventListener("cut", function(e) {
+        if (isExamActive) e.preventDefault();
+    });
+
+    document.addEventListener("paste", function(e) {
+        if (isExamActive) e.preventDefault();
+    });
+
+    document.addEventListener("dragstart", function(e) {
+        if (isExamActive) e.preventDefault();
+    });
+
+    document.addEventListener("selectstart", function(e) {
+        if (isExamActive) e.preventDefault();
+    });
+
+    document.addEventListener("visibilitychange", function() {
+        if (document.visibilityState === 'hidden' && isExamActive) {
+            triggerSecurityViolation("focus");
+        }
+    });
+
+    window.addEventListener("blur", function() {
+        if (isExamActive) {
+            triggerSecurityViolation("focus");
+        }
+    });
+
+    document.addEventListener("fullscreenchange", function() {
+        if (!isExamActive) return;
+        if (!isFullscreenActive() && !fullscreenWarningShown) {
+            fullscreenWarningShown = true;
+            triggerSecurityViolation("focus");
+        }
+    });
+
+    document.addEventListener("webkitfullscreenchange", function() {
+        if (!isExamActive) return;
+        if (!isFullscreenActive() && !fullscreenWarningShown) {
+            fullscreenWarningShown = true;
+            triggerSecurityViolation("focus");
+        }
+    });
+
+    window.addEventListener("keyup", function(e) {
+        if (!isExamActive) return;
+        if (e.key === 'PrintScreen') {
+            triggerSecurityViolation("screenshot");
+        }
+    });
+
+    window.addEventListener("keydown", function(e) {
+        if (!isExamActive) return;
+
+        const key = (e.key || '').toLowerCase();
+
+        if (e.key === 'PrintScreen') {
+            e.preventDefault();
+            triggerSecurityViolation("screenshot");
+            return;
+        }
+
+        if (e.ctrlKey && key === 'p') {
+            e.preventDefault();
+            triggerSecurityViolation("screenshot");
+            return;
+        }
+
+        if (e.metaKey && e.shiftKey && ['3', '4', '5', 's'].includes(key)) {
+            e.preventDefault();
+            triggerSecurityViolation("screenshot");
+            return;
+        }
+
+        if (e.ctrlKey && e.shiftKey && ['s', 'i', 'j', 'c'].includes(key)) {
+            e.preventDefault();
+            triggerSecurityViolation("focus");
+            return;
+        }
+
+        if (e.key === 'F12') {
+            e.preventDefault();
+            triggerSecurityViolation("focus");
+            return;
+        }
+
+        if (e.altKey && e.key === 'PrintScreen') {
+            e.preventDefault();
+            triggerSecurityViolation("screenshot");
+            return;
+        }
+
+        if (e.metaKey && key === 'p') {
+            e.preventDefault();
+            triggerSecurityViolation("screenshot");
+            return;
+        }
+    });
+</script>
+</body>
+</html>

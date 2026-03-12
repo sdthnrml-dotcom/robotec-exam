@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - Robotec</title>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #121212;
+            margin: 0;
+            padding: 14px;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header-card, .chart-card, .table-card, .stat-card {
+            background: #1e1e1e;
+            border-radius: 14px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.45);
+        }
+
+        .header-card {
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 18px;
+            gap: 18px;
+            border-top: 3px solid #2196f3;
+        }
+
+        .header-info h2 {
+            margin: 0;
+            color: #2196f3;
+            font-size: 1.5rem;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .header-info h1 {
+            margin: 6px 0 0 0;
+            color: #ffffff;
+            font-size: 1.15rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(120px, 1fr));
+            gap: 10px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .meta-input {
+            padding: 11px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            font-size: 1rem;
+            outline: none;
+            width: 100%;
+            transition: 0.2s;
+            text-align: center;
+            box-sizing: border-box;
+            background-color: #2c2c2e;
+            color: #fff;
+        }
+
+        .meta-input:focus {
+            border-color: #2196f3;
+        }
+
+        .meta-input:disabled {
+            background-color: #1a1a1a;
+            color: #666;
+            cursor: not-allowed;
+            border-color: #222;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.98rem;
+            transition: 0.2s;
+            min-height: 46px;
+        }
+
+        .btn-start { background: #4caf50; color: white; }
+        .btn-stop { background: #f44336; color: white; }
+        .btn-pdf { background: #2196f3; color: white; }
+        .btn-pdf:hover { background: #1976d2; }
+
+        .btn:disabled {
+            background: #444 !important;
+            color: #888;
+            cursor: not-allowed;
+            opacity: 1;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2.2fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .chart-card, .table-card {
+            padding: 18px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px 12px;
+        }
+
+        .stat-card h3 {
+            margin: 0;
+            color: #aaa;
+            font-size: 0.92rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card span {
+            color: #2196f3;
+            font-size: 2.2rem;
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+            line-height: 1;
+        }
+
+        .timer-card span {
+            color: #ff9800;
+        }
+
+        .cheat-card span {
+            color: #f44336;
+        }
+
+        .sort-note {
+            color: #999;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 14px;
+        }
+
+        th, td {
+            padding: 11px 12px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #2c2c2e;
+            color: #ccc;
+            font-weight: bold;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        td {
+            text-align: center;
+            color: #eee;
+        }
+
+        td:nth-child(1),
+        td:nth-child(2) {
+            text-align: left;
+        }
+
+        tr:hover {
+            background-color: #252525;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .grade-pill {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+            display: inline-block;
+            text-align: center;
+            min-width: 36px;
+        }
+
+        .btn-clear {
+            background: #3a1c1c;
+            color: #ff5252;
+            border: 1px solid #ff5252;
+            padding: 7px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-clear:hover {
+            background: #ff5252;
+            color: white;
+        }
+
+        .cheat-badge {
+            font-size: 1.15rem;
+            margin-left: 8px;
+            cursor: help;
+        }
+
+        #pdf-content {
+            background: #1e1e1e;
+            border-radius: 8px;
+        }
+
+        h3 {
+            color: #e0e0e0;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #2196f3;
+            display: none;
+        }
+
+        .report-header h3 {
+            margin: 0;
+            color: #fff;
+            font-size: 1.35rem;
+            text-transform: uppercase;
+        }
+
+        .report-header p {
+            margin: 5px 0 0 0;
+            color: #aaa;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            justify-content: flex-start;
+        }
+
+        .search-input {
+            width: 140px;
+            max-width: 140px;
+            padding: 11px 12px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            font-size: 0.98rem;
+            outline: none;
+            box-sizing: border-box;
+            background-color: #2c2c2e;
+            color: #fff;
+            text-align: center;
+        }
+
+        .search-input:focus {
+            border-color: #2196f3;
+        }
+
+        .search-note {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        .modal-box {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            text-align: center;
+            animation: gentleDrop 0.3s ease-out;
+        }
+
+        @keyframes gentleDrop {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-box h3 {
+            margin: 0 0 15px 0;
+            color: #2196f3;
+            font-size: 1.4rem;
+        }
+
+        .modal-box p {
+            color: #ccc;
+            font-size: 1.03rem;
+            margin-bottom: 18px;
+            line-height: 1.4;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 18px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+        }
+
+        .btn-cancel {
+            background: #444;
+            color: #eee;
+        }
+
+        .btn-cancel:hover {
+            background: #555;
+        }
+
+        .light-print {
+            background: white !important;
+            color: black !important;
+            padding: 18px !important;
+        }
+
+        .light-print th {
+            background-color: #f8f9fa !important;
+            color: #333 !important;
+            border-bottom: 1px solid #ccc !important;
+        }
+
+        .light-print td {
+            color: #000 !important;
+            border-bottom: 1px solid #eee !important;
+        }
+
+        .light-print h3 {
+            color: #000 !important;
+        }
+
+        .light-print p,
+        .light-print .sort-note,
+        .light-print .search-note {
+            color: #555 !important;
+        }
+
+        .light-print .table-card {
+            background: white !important;
+            box-shadow: none !important;
+            color: black !important;
+        }
+
+        @media (max-width: 980px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 10px;
+            }
+
+            .header-info h2 {
+                font-size: 1.2rem;
+            }
+
+            .header-info h1 {
+                font-size: 1rem;
+                letter-spacing: 1px;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .stat-card span {
+                font-size: 1.7rem;
+            }
+
+            th, td {
+                padding: 10px 8px;
+                font-size: 0.9rem;
+            }
+
+            .btn {
+                font-size: 0.92rem;
+            }
+
+            .search-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-input {
+                width: 100%;
+                max-width: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="customModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 id="modalTitle">Notice</h3>
+        <p id="modalMessage">Message goes here</p>
+        <input type="password" id="modalInput" class="meta-input" style="display:none; width: 100%; margin-bottom: 15px;" placeholder="Enter Password">
+        <div class="modal-actions">
+            <button id="btnCancel" class="btn btn-cancel">Cancel</button>
+            <button id="btnConfirm" class="btn btn-start">OK</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="header-card">
+        <div class="header-info">
+            <h2>Faculty Of Languages And Technology</h2>
+            <h1>Robotec Teacher Dashboard</h1>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="branchInput" class="meta-input" placeholder="Branch Name" oninput="checkInputs()">
+            <input type="text" id="groupInput" class="meta-input" placeholder="Group No" oninput="checkInputs()">
+            <input type="number" id="durationInput" class="meta-input" placeholder="Minutes" min="1" value="30" oninput="checkInputs()">
+            <button id="toggleBtn" class="btn btn-start" onclick="toggleExam()" disabled>Fill Details to Start</button>
+            <button class="btn btn-pdf" onclick="downloadPDF()">Download PDF</button>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="left-column">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Live Students</h3>
+                    <span id="loginCount">0</span>
+                </div>
+
+                <div class="stat-card cheat-card">
+                    <h3>Cheating Alerts</h3>
+                    <span id="cheatCount">0</span>
+                </div>
+
+                <div class="stat-card timer-card">
+                    <h3>Exam Timer</h3>
+                    <span id="timerDisplay">--:--</span>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Total Results</h3>
+                    <span id="resultCount">0</span>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3 style="margin-top: 0; text-align: center;">Grade Distribution</h3>
+                <canvas id="gradeChart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-card" id="pdf-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                <div>
+                    <h3 style="margin:0;">Student Results</h3>
+                    <div class="sort-note">Sorted by Student ID order</div>
+                </div>
+                <button class="btn-clear no-print" onclick="clearAllData()">Clear All Data</button>
+            </div>
+
+            <div class="search-row no-print">
+    <input
+        type="text"
+        id="searchInput"
+        class="search-input"
+        placeholder="Student ID"
+        maxlength="8"
+        inputmode="numeric"
+        oninput="handleSearchInput()"
+    >
+</div>
+
+            <div class="report-header" id="reportHeader">
+                <h3>Exam Results Report</h3>
+                <p id="reportHeadlineText">Branch: --- | Group No: --- | Duration: ---</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>Answered</th>
+                            <th>Marks</th>
+                            <th>Grade</th>
+                            <th class="no-print">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0esujLjeIGinGEAnvJ7FXk6pR-fPKftU",
+        authDomain: "robotec-exam.firebaseapp.com",
+        databaseURL: "https://robotec-exam-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "robotec-exam",
+        storageBucket: "robotec-exam.firebasestorage.app",
+        messagingSenderId: "917109694961",
+        appId: "1:917109694961:web:36e9055b16af141292e450"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let gradeChartInstance = null;
+    const ADMIN_PASSWORD = "123";
+
+    let currentStatus = 'stopped';
+    let currentResults = [];
+    let activeLogins = 0;
+    let timerInterval = null;
+    let currentSettings = {};
+    let autoStopTriggered = false;
+
+    function customBox(message, type = 'alert') {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('customModal');
+            const title = document.getElementById('modalTitle');
+            const msg = document.getElementById('modalMessage');
+            const input = document.getElementById('modalInput');
+            const btnCancel = document.getElementById('btnCancel');
+            const btnConfirm = document.getElementById('btnConfirm');
+
+            msg.innerText = message;
+            input.value = '';
+            modal.style.display = 'flex';
+
+            if (type === 'alert') {
+                title.innerText = "Notice";
+                title.style.color = "#2196f3";
+                input.style.display = 'none';
+                btnCancel.style.display = 'none';
+                btnConfirm.innerText = "OK";
+                btnConfirm.className = "btn btn-start";
+                btnConfirm.onclick = () => { modal.style.display = 'none'; resolve(true); };
+            }
+            else if (type === 'confirm') {
+                title.innerText = "Are you sure?";
+                title.style.color = "#f44336";
+                input.style.display = 'none';
+                btnCancel.style.display = 'block';
+                btnConfirm.innerText = "Yes, Proceed";
+                btnConfirm.className = "btn btn-stop";
+                btnCancel.onclick = () => { modal.style.display = 'none'; resolve(false); };
+                btnConfirm.onclick = () => { modal.style.display = 'none'; resolve(true); };
+            }
+            else if (type === 'password') {
+                title.innerText = "Security Check";
+                title.style.color = "#ff9800";
+                input.style.display = 'block';
+                btnCancel.style.display = 'block';
+                btnConfirm.innerText = "Submit";
+                btnConfirm.className = "btn btn-start";
+                setTimeout(() => input.focus(), 50);
+                btnCancel.onclick = () => { modal.style.display = 'none'; resolve(null); };
+                btnConfirm.onclick = () => { modal.style.display = 'none'; resolve(input.value); };
+            }
+        });
+    }
+
+    db.ref('status').on('value', snap => {
+        currentStatus = snap.val() || 'stopped';
+        if (currentStatus !== 'running') autoStopTriggered = false;
+        updateUI();
+    });
+
+    db.ref('settings').on('value', snap => {
+        currentSettings = snap.val() || {};
+
+        document.getElementById('branchInput').value = currentSettings.branch || '';
+        document.getElementById('groupInput').value = currentSettings.group || '';
+        document.getElementById('durationInput').value = currentSettings.durationMinutes || document.getElementById('durationInput').value || 30;
+
+        updateUI();
+    });
+
+    db.ref('results').on('value', snap => {
+        const data = snap.val() || {};
+        currentResults = Object.entries(data).map(([key, value]) => ({ key, ...value }));
+        sortResultsByStudentId();
+        updateUI();
+    });
+
+    db.ref('active_students').on('value', snap => {
+        const data = snap.val() || {};
+        activeLogins = Object.keys(data).length;
+        document.getElementById('loginCount').innerText = activeLogins;
+    });
+
+    function getLast8Digits(id) {
+        return String(id || '').replace(/\D/g, '').slice(-8);
+    }
+
+    function extractIdParts(id) {
+        const original = String(id || '').trim();
+        const match = original.match(/^([a-zA-Z\-]*?)(\d+)$/);
+
+        if (match) {
+            return {
+                prefix: match[1].toLowerCase(),
+                number: parseInt(match[2], 10),
+                raw: original.toLowerCase()
+            };
+        }
+
+        return {
+            prefix: original.toLowerCase(),
+            number: Number.MAX_SAFE_INTEGER,
+            raw: original.toLowerCase()
+        };
+    }
+
+    function sortResultsByStudentId() {
+        currentResults.sort((a, b) => {
+            const aId = extractIdParts(a.id);
+            const bId = extractIdParts(b.id);
+
+            if (aId.prefix !== bId.prefix) {
+                return aId.prefix.localeCompare(bId.prefix);
+            }
+
+            if (aId.number !== bId.number) {
+                return aId.number - bId.number;
+            }
+
+            return aId.raw.localeCompare(bId.raw);
+        });
+    }
+
+    function handleSearchInput() {
+        const input = document.getElementById('searchInput');
+        input.value = input.value.replace(/\D/g, '').slice(0, 8);
+        renderResultsTable();
+    }
+
+    function checkInputs() {
+        if (currentStatus === 'running') return;
+
+        const branch = document.getElementById('branchInput').value.trim();
+        const group = document.getElementById('groupInput').value.trim();
+        const duration = parseInt(document.getElementById('durationInput').value, 10);
+        const btn = document.getElementById('toggleBtn');
+
+        if (branch === "" || group === "" || !duration || duration < 1) {
+            btn.disabled = true;
+            btn.innerText = "Fill Details to Start";
+            btn.className = "btn btn-start";
+        } else {
+            btn.disabled = false;
+            btn.innerText = "Start Exam";
+            btn.className = "btn btn-start";
+        }
+    }
+
+    window.onload = function() {
+        updateUI();
+    };
+
+    function toggleExam() {
+        if (currentStatus === 'stopped') {
+            const branch = document.getElementById('branchInput').value.trim();
+            const group = document.getElementById('groupInput').value.trim();
+            const durationMinutes = parseInt(document.getElementById('durationInput').value, 10);
+
+            if (!branch || !group || !durationMinutes || durationMinutes < 1) {
+                customBox("Please fill Branch, Group, and valid Duration.", "alert");
+                return;
+            }
+
+            const startTime = Date.now();
+
+            db.ref('settings').set({
+                branch,
+                group,
+                durationMinutes,
+                startTime
+            });
+
+            db.ref('status').set('running');
+            db.ref('active_students').remove();
+        } else {
+            db.ref('status').set('stopped');
+        }
+    }
+
+    async function deleteStudent(indexInFilteredList) {
+        const filteredResults = getFilteredResults();
+        const selectedStudent = filteredResults[indexInFilteredList];
+        if (!selectedStudent) return;
+
+        const isSure = await customBox("You are about to delete this student's result.", "confirm");
+        if (isSure) {
+            const pass = await customBox("Please enter the admin password to delete:", "password");
+            if (pass === ADMIN_PASSWORD) {
+                db.ref('results/' + selectedStudent.key).remove();
+            } else if (pass !== null) {
+                customBox("Incorrect password! Deletion blocked.", "alert");
+            }
+        }
+    }
+
+    async function clearAllData() {
+        const isSure = await customBox("WARNING: This will delete ALL student results, logins, and exam settings.", "confirm");
+        if (isSure) {
+            const pass = await customBox("Please enter the admin password to clear all data:", "password");
+            if (pass === ADMIN_PASSWORD) {
+                db.ref('results').remove();
+                db.ref('active_students').remove();
+                db.ref('settings').remove();
+                db.ref('status').set('stopped');
+
+                document.getElementById('branchInput').value = "";
+                document.getElementById('groupInput').value = "";
+                document.getElementById('durationInput').value = "30";
+                document.getElementById('searchInput').value = "";
+                document.getElementById('loginCount').innerText = "0";
+                document.getElementById('cheatCount').innerText = "0";
+                document.getElementById('resultCount').innerText = "0";
+                document.getElementById('timerDisplay').innerText = "--:--";
+
+                customBox("All data has been successfully cleared.", "alert");
+            } else if (pass !== null) {
+                customBox("Incorrect password! Action blocked.", "alert");
+            }
+        }
+    }
+
+    function getFilteredResults() {
+        const searchValue = document.getElementById('searchInput').value.trim();
+
+        if (!searchValue) return currentResults;
+
+        return currentResults.filter(res =>
+            getLast8Digits(res.id).includes(searchValue)
+        );
+    }
+
+    function updateUI() {
+        const btn = document.getElementById('toggleBtn');
+        const branchInp = document.getElementById('branchInput');
+        const groupInp = document.getElementById('groupInput');
+        const durationInp = document.getElementById('durationInput');
+
+        if (currentStatus === 'running') {
+            btn.disabled = false;
+            btn.innerText = "Stop Exam";
+            btn.className = "btn btn-stop";
+            branchInp.disabled = true;
+            groupInp.disabled = true;
+            durationInp.disabled = true;
+        } else {
+            branchInp.disabled = false;
+            groupInp.disabled = false;
+            durationInp.disabled = false;
+            checkInputs();
+        }
+
+        const reportHeader = document.getElementById('reportHeader');
+        const branchVal = branchInp.value;
+        const groupVal = groupInp.value;
+        const durationVal = durationInp.value;
+
+        if (branchVal !== "" && groupVal !== "") {
+            reportHeader.style.display = 'block';
+            document.getElementById('reportHeadlineText').innerText =
+                `Branch: ${branchVal}  |  Group No: ${groupVal}  |  Duration: ${durationVal} min`;
+        } else {
+            reportHeader.style.display = 'none';
+        }
+
+        renderResultsTable();
+        updateChart(currentResults);
+        updateCounters();
+        updateTimer();
+    }
+
+    function renderResultsTable() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        const filteredResults = getFilteredResults();
+
+        if (filteredResults.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#666;">No matching results found.</td></tr>`;
+            return;
+        }
+
+        filteredResults.forEach((res, index) => {
+            let color = "#f44336";
+            if (res.grade === "A+" || res.grade === "A") color = "#4caf50";
+            if (res.grade === "B") color = "#8bc34a";
+            if (res.grade === "C") color = "#ff9800";
+            if (res.grade === "S") color = "#ffeb3b";
+            if (res.grade === "VOID") color = "#d32f2f";
+
+            let cheatWarning = '';
+
+            if (res.violation === "focus") {
+                cheatWarning = `<span class="cheat-badge" title="Student left exam window or switched apps.">⚠️</span>`;
+            } else if (res.violation === "screenshot") {
+                cheatWarning = `<span class="cheat-badge" title="Screenshot attempt detected.">🚨</span>`;
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${getLast8Digits(res.id) || '-'}</strong></td>
+                <td>${res.name || '-'} ${cheatWarning}</td>
+                <td>${res.answered || 0} / 14</td>
+                <td><strong>${res.marks || 0}</strong></td>
+                <td><span class="grade-pill" style="background:${color}; color:${res.grade==="S" || res.grade==="C" ? '#333' : 'white'}">${res.grade || 'F'}</span></td>
+                <td class="no-print"><button class="btn-clear" onclick="deleteStudent(${index})">X</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateCounters() {
+        const cheatCount = currentResults.filter(r =>
+            r.violation === "focus" || r.violation === "screenshot"
+        ).length;
+
+        document.getElementById('cheatCount').innerText = cheatCount;
+        document.getElementById('resultCount').innerText = currentResults.length;
+    }
+
+    function updateChart(results) {
+        const counts = { "A+": 0, "A": 0, "B": 0, "C": 0, "S": 0, "F": 0, "VOID": 0 };
+        results.forEach(r => {
+            if (counts[r.grade] !== undefined) counts[r.grade]++;
+        });
+
+        const ctx = document.getElementById('gradeChart').getContext('2d');
+        if (gradeChartInstance) gradeChartInstance.destroy();
+
+        Chart.defaults.color = '#ccc';
+
+        gradeChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['A+', 'A', 'B', 'C', 'S', 'F', 'VOID'],
+                datasets: [{
+                    label: 'Number of Students',
+                    data: [
+                        counts['A+'],
+                        counts['A'],
+                        counts['B'],
+                        counts['C'],
+                        counts['S'],
+                        counts['F'],
+                        counts['VOID']
+                    ],
+                    backgroundColor: ['#4caf50', '#4caf50', '#8bc34a', '#ff9800', '#ffeb3b', '#f44336', '#d32f2f'],
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 },
+                        grid: { color: '#333' }
+                    },
+                    x: {
+                        grid: { color: '#333' }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#ccc' } }
+                }
+            }
+        });
+    }
+
+    function formatTime(ms) {
+        if (ms < 0) ms = 0;
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        return `${minutes}:${seconds}`;
+    }
+
+    function updateTimer() {
+        const timerDisplay = document.getElementById('timerDisplay');
+
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        if (currentStatus !== 'running' || !currentSettings.startTime || !currentSettings.durationMinutes) {
+            timerDisplay.innerText = "--:--";
+            return;
+        }
+
+        const endTime = currentSettings.startTime + (currentSettings.durationMinutes * 60 * 1000);
+
+        const tick = () => {
+            const remaining = endTime - Date.now();
+            timerDisplay.innerText = formatTime(remaining);
+
+            if (remaining <= 0 && currentStatus === 'running' && !autoStopTriggered) {
+                autoStopTriggered = true;
+                db.ref('status').set('stopped');
+                customBox("Exam time is over. The exam has been stopped automatically.", "alert");
+            }
+        };
+
+        tick();
+        timerInterval = setInterval(tick, 1000);
+    }
+
+    function downloadPDF() {
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+
+        const element = document.getElementById('pdf-content');
+        element.classList.add('light-print');
+
+        const branchVal = document.getElementById('branchInput').value || 'Unknown_Branch';
+        const groupVal = document.getElementById('groupInput').value || 'Unknown_Group';
+        const fileName = `Robotec_Results_${branchVal}_${groupVal}.pdf`;
+
+        const opt = {
+            margin: 8,
+            filename: fileName,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, scrollY: 0 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+            element.classList.remove('light-print');
+        }).catch(() => {
+            document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+            element.classList.remove('light-print');
+        });
+    }
+</script>
+</body>
+</html>
